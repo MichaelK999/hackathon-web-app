@@ -57,7 +57,6 @@ export default function SkillTreePage() {
 
 	const handleUnlocked = useCallback(
 		(label: string) => {
-			// Update local state to reflect the unlock
 			setTree((prev) => {
 				const newTree = { ...prev.tree };
 				for (const root of Object.keys(newTree)) {
@@ -69,7 +68,6 @@ export default function SkillTreePage() {
 				}
 				return { tree: newTree };
 			});
-			// Update the selected node too
 			setSelectedNode((prev) =>
 				prev && prev.label === label
 					? { ...prev, status: "unlocked" }
@@ -79,7 +77,6 @@ export default function SkillTreePage() {
 		[],
 	);
 
-	// Escape key to close panel
 	useEffect(() => {
 		const onKeyDown = (e: KeyboardEvent) => {
 			if (e.key === "Escape" && selectedNode) {
@@ -107,15 +104,23 @@ export default function SkillTreePage() {
 						Skill Tree
 					</h1>
 				</div>
-				{!loading && !isEmpty && (
-					<button
-						type="button"
-						onClick={loadTree}
+				<div className="flex items-center gap-3">
+					<Link
+						href="/flashcards"
 						className="rounded-md border border-[#4a6fa5]/30 px-3 py-1.5 text-xs text-[#7eb4e2] transition-colors hover:border-[#4a6fa5]/60"
 					>
-						Refresh
-					</button>
-				)}
+						Flashcards
+					</Link>
+					{!loading && !isEmpty && (
+						<button
+							type="button"
+							onClick={loadTree}
+							className="rounded-md border border-[#4a6fa5]/30 px-3 py-1.5 text-xs text-[#7eb4e2] transition-colors hover:border-[#4a6fa5]/60"
+						>
+							Refresh
+						</button>
+					)}
+				</div>
 			</header>
 
 			{/* Main content */}
