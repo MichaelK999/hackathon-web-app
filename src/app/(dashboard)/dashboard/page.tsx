@@ -2,7 +2,8 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { CategorySelector } from "@/components/dashboard/CategorySelector";
 import { PipelineControls } from "@/components/dashboard/PipelineControls";
 import { PipelineProgress } from "@/components/dashboard/PipelineProgress";
 import { useGraphData } from "@/hooks/useGraphData";
@@ -31,6 +32,7 @@ export default function DashboardPage() {
 	const graph = useGraphData();
 	const notes = useNotes();
 	const notesStartedRef = useRef(false);
+	const [runId, setRunId] = useState<string | null>(null);
 
     // Feed SSE events into graph data manager
     useEffect(() => {
@@ -58,10 +60,21 @@ export default function DashboardPage() {
 			pipeline.reset();
 			notes.stopPolling();
 			notesStartedRef.current = false;
+			setRunId(null);
 			const { run_id } = await startPipeline(params);
+			setRunId(run_id);
 			pipeline.connect(run_id);
 		} catch (err) {
 			console.error("Failed to start pipeline:", err);
+		}
+	};
+
+	const handleContinue = async (excludedCategories: string[]) => {
+		if (!runId) return;
+		try {
+			await continuePipeline({ run_id: runId, excluded_categories: excludedCategories });
+		} catch (err) {
+			console.error("Failed to continue pipeline:", err);
 		}
 	};
 
@@ -80,6 +93,14 @@ export default function DashboardPage() {
 					progress={pipeline.progress}
 					error={pipeline.error}
 				/>
+
+				{/* Privacy review: show category selector when awaiting review */}
+				{pipeline.isAwaitingReview && pipeline.scanResult && (
+					<CategorySelector
+						scanResult={pipeline.scanResult}
+						onContinue={handleContinue}
+					/>
+				)}
 
                 {/* Node count */}
                 {graph.data.nodes.length > 0 && (
