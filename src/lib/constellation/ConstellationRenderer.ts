@@ -66,6 +66,7 @@ function createTextSprite(
 		transparent: true,
 		opacity: initialOpacity,
 		depthTest: false,
+		blending: THREE.NormalBlending,
 	});
 	const sprite = new THREE.Sprite(mat);
 	sprite.scale.set(w / scale, h / scale, 1);
@@ -433,7 +434,7 @@ export class ConstellationRenderer {
 			// Subcategory label (zoom-only)
 			const label = createTextSprite(
 				sub.node.name,
-				11,
+				13,
 				PALETTE.subcategoryCSS,
 				0,
 			);
@@ -467,7 +468,7 @@ export class ConstellationRenderer {
 			});
 
 			// Topic label (zoom-only)
-			const label = createTextSprite(topic.node.name, 9, PALETTE.topicCSS, 0);
+			const label = createTextSprite(topic.node.name, 11, PALETTE.topicCSS, 0);
 			label.position.set(topic.local.x, topic.local.y - 8, 1);
 			group.add(label);
 			sceneGroup.labels.push({ sprite: label, zoomOnly: true });
@@ -510,9 +511,9 @@ export class ConstellationRenderer {
 				: 30;
 		const rootLabel = createTextSprite(
 			layout.rootName,
-			16,
+			18,
 			PALETTE.rootLabelCSS,
-			0.85,
+			1.0,
 		);
 		rootLabel.position.set(0, labelY, 2);
 		group.add(rootLabel);
@@ -618,7 +619,7 @@ export class ConstellationRenderer {
 			const showLabels = this.focusedRootId === cg.rootId;
 			for (const label of cg.labels) {
 				if (!label.zoomOnly) continue;
-				const target = showLabels ? 0.85 : 0;
+				const target = showLabels ? 1.0 : 0;
 				label.sprite.material.opacity = lerpTo(
 					label.sprite.material.opacity,
 					target,
@@ -630,9 +631,9 @@ export class ConstellationRenderer {
 			if (cg.rootLabel) {
 				const target =
 					this.focusedRootId === null
-						? 0.85
+						? 1.0
 						: this.focusedRootId === cg.rootId
-							? 0.95
+							? 1.0
 							: 0.1;
 				cg.rootLabel.sprite.material.opacity = lerpTo(
 					cg.rootLabel.sprite.material.opacity,
