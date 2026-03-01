@@ -35,7 +35,11 @@ export async function updateSession(request: NextRequest) {
 
   const user = data?.claims
 
+  // Skip auth in local development
+  const isLocalDev = process.env.NODE_ENV === 'development'
+
   if (
+    !isLocalDev &&
     !user &&
     request.nextUrl.pathname !== '/' &&
     !request.nextUrl.pathname.startsWith('/login') &&
