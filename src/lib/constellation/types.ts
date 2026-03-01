@@ -22,6 +22,19 @@ export interface RendererConfig {
   subFocusZoom: number;
   /** Zoom threshold below which we auto-unfocus */
   unfocusZoomThreshold: number;
+  /** Padding multiplier for dynamic focus zoom (larger = more zoomed out) */
+  focusZoomPadding: number;
+  /** Nebula cloud effect settings */
+  nebula: {
+    /** Opacity at overview zoom level */
+    overviewOpacity: number;
+    /** Scale multiplier relative to constellation radius */
+    scaleMultiplier: number;
+    /** CSS color for the nebula glow */
+    color: string;
+    /** Gradient softness (0–1, lower = harder edge) */
+    softness: number;
+  };
 }
 
 export const DEFAULT_CONFIG: RendererConfig = {
@@ -33,6 +46,13 @@ export const DEFAULT_CONFIG: RendererConfig = {
   /** Zoom level when focused on a subcategory within a constellation */
   subFocusZoom: 6.0,
   unfocusZoomThreshold: 1.2,
+  focusZoomPadding: 2.5,
+  nebula: {
+    overviewOpacity: 0.18,
+    scaleMultiplier: 3.5,
+    color: "#b08aff",
+    softness: 0.35,
+  },
 };
 
 // ── Color palette ───────────────────────────────────────────
@@ -102,11 +122,13 @@ export interface ConstellationSceneGroup {
   rootId: string;
   rootName: string;
   center: Vec2;
+  radius: number;
   group: THREE.Group;
   stars: StarMesh[];
   lines: LineMesh[];
   labels: LabelSprite[];
   rootLabel: LabelSprite | null;
+  nebula: THREE.Sprite | null;
 }
 
 export interface StarMesh {

@@ -73,6 +73,29 @@ function createTextSprite(
 	return sprite;
 }
 
+function createNebulaTexture(
+	size: number,
+	cssColor: string,
+	softness: number,
+): THREE.CanvasTexture {
+	const canvas = document.createElement("canvas");
+	canvas.width = canvas.height = size;
+	const ctx = canvas.getContext("2d")!;
+	const cx = size / 2;
+	const grad = ctx.createRadialGradient(cx, cx, 0, cx, cx, cx);
+	// Multi-stop gradient: bright core → soft glow → transparent edge
+	grad.addColorStop(0, cssColor);
+	grad.addColorStop(softness * 0.5, cssColor);
+	grad.addColorStop(softness, `${cssColor}88`);
+	grad.addColorStop(softness + (1 - softness) * 0.5, `${cssColor}22`);
+	grad.addColorStop(1, "rgba(0,0,0,0)");
+	ctx.fillStyle = grad;
+	ctx.fillRect(0, 0, size, size);
+	const tex = new THREE.CanvasTexture(canvas);
+	tex.needsUpdate = true;
+	return tex;
+}
+
 // ── Easing ──────────────────────────────────────────────────
 
 function easeInOutCubic(t: number): number {
@@ -107,6 +130,10 @@ export class ConstellationRenderer {
 	// Shared textures (created once, reused)
 	private subStarTex: THREE.CanvasTexture;
 	private topicStarTex: THREE.CanvasTexture;
+	private nebulaTex: THREE.CanvasTexture;
+
+	// Camera frustum half-height (set in fitCamera, used for dynamic zoom)
+	private frustumSize = 600;
 
 	// Camera animation
 	private focusedRootId: string | null = null;
@@ -202,6 +229,7 @@ export class ConstellationRenderer {
 		// Shared textures
 		this.subStarTex = createStarTexture(64, PALETTE.subcategoryCSS, 0.4);
 		this.topicStarTex = createStarTexture(64, PALETTE.topicCSS, 0.35);
+		this.nebulaTex = createNebulaTexture(256, this.config.nebula.color, this.config.nebula.softness);
 
 		// Background stars
 		this.createBackgroundStars();
@@ -276,7 +304,7 @@ export class ConstellationRenderer {
 		this.startCameraAnimation({
 			x: group.center.x,
 			y: group.center.y,
-			zoom: this.config.focusZoom,
+			zoom: this.computeFocusZoom(group.radius),
 		});
 	}
 
@@ -308,7 +336,7 @@ export class ConstellationRenderer {
 				this.startCameraAnimation({
 					x: group.center.x,
 					y: group.center.y,
-					zoom: this.config.focusZoom,
+					zoom: this.computeFocusZoom(group.radius),
 				});
 			}
 		} else {
@@ -354,6 +382,7 @@ export class ConstellationRenderer {
 		this.composer.dispose();
 		this.subStarTex.dispose();
 		this.topicStarTex.dispose();
+		this.nebulaTex.dispose();
 
 		if (this.container.contains(canvas)) {
 			this.container.removeChild(canvas);
@@ -480,11 +509,13 @@ export class ConstellationRenderer {
 			rootId: layout.rootId,
 			rootName: layout.rootName,
 			center: layout.center,
+			radius: layout.radius,
 			group,
 			stars: [],
 			lines: [],
 			labels: [],
 			rootLabel: null,
+			nebula: null,
 		};
 
 		// Subcategory stars
@@ -601,6 +632,22 @@ export class ConstellationRenderer {
 		group.add(rootLabel);
 		sceneGroup.rootLabel = { sprite: rootLabel, zoomOnly: false };
 
+		// Nebula cloud sprite
+		const nebulaMat = new THREE.SpriteMaterial({
+			map: this.nebulaTex,
+			transparent: true,
+			opacity: this.config.nebula.overviewOpacity,
+			blending: THREE.AdditiveBlending,
+			depthTest: false,
+		});
+		const nebulaSprite = new THREE.Sprite(nebulaMat);
+		const nebulaScale = layout.radius * this.config.nebula.scaleMultiplier;
+		nebulaSprite.scale.set(nebulaScale, nebulaScale, 1);
+		nebulaSprite.position.set(0, 0, -1);
+		nebulaSprite.renderOrder = -1;
+		group.add(nebulaSprite);
+		sceneGroup.nebula = nebulaSprite;
+
 		this.groups.push(sceneGroup);
 	}
 
@@ -626,6 +673,7 @@ export class ConstellationRenderer {
 
 	private fitCamera(totalRadius: number): void {
 		const frustum = Math.max(600, totalRadius * 1.3);
+		this.frustumSize = frustum;
 		const aspect =
 			this.container.clientWidth / this.container.clientHeight || 1;
 		this.camera.left = -frustum * aspect;
@@ -636,6 +684,12 @@ export class ConstellationRenderer {
 		this.targetZoom = 1;
 		this.camera.position.set(0, 0, 1000);
 		this.camera.updateProjectionMatrix();
+	}
+
+	/** Compute a zoom level that fits the constellation's radius on screen. */
+	private computeFocusZoom(radius: number): number {
+		const zoom = this.frustumSize / (radius * this.config.focusZoomPadding);
+		return Math.max(1.5, Math.min(6.0, zoom));
 	}
 
 	private startCameraAnimation(target: CameraState): void {
@@ -749,6 +803,27 @@ export class ConstellationRenderer {
 					cg.rootLabel.sprite.material.opacity,
 					target,
 					0.08,
+				);
+			}
+
+			// Nebula cloud opacity — fade away when entering the constellation
+			if (cg.nebula) {
+				const { overviewOpacity } = this.config.nebula;
+				let nebulaTarget: number;
+				if (this.focusedRootId === null) {
+					// Overview: show nebula
+					nebulaTarget = overviewOpacity;
+				} else if (this.focusedRootId === cg.rootId) {
+					// This constellation is focused: fade to 0 ("entering the cloud")
+					nebulaTarget = 0;
+				} else {
+					// Another constellation is focused: dim
+					nebulaTarget = overviewOpacity * 0.3;
+				}
+				cg.nebula.material.opacity = lerpTo(
+					cg.nebula.material.opacity,
+					nebulaTarget,
+					0.06,
 				);
 			}
 		}
