@@ -16,11 +16,11 @@ import type {
 const MIN_CONSTELLATION_SPACING = 300;
 
 /** Base ring radius for subcategories around their root center. */
-const SUB_RING_BASE = 100;
+const SUB_RING_BASE = 160;
 
 /** Distance topics scatter from their parent subcategory. */
-const TOPIC_SCATTER_MIN = 40;
-const TOPIC_SCATTER_MAX = 75;
+const TOPIC_SCATTER_MIN = 70;
+const TOPIC_SCATTER_MAX = 130;
 
 // ── Helpers ─────────────────────────────────────────────────
 
@@ -147,7 +147,7 @@ function placeConstellationCenters(count: number, spacing: number): Vec2[] {
 
 function subRingRadius(subCount: number): number {
   if (subCount <= 1) return 0;
-  return SUB_RING_BASE + subCount * 12;
+  return SUB_RING_BASE + subCount * 20;
 }
 
 function layoutConstellation(

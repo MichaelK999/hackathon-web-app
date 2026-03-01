@@ -27,7 +27,7 @@ export interface RendererConfig {
 export const DEFAULT_CONFIG: RendererConfig = {
   background: 0x08051a,
   backgroundStarCount: 5000,
-  bloom: { strength: 0.7, radius: 0.5, threshold: 0.45 },
+  bloom: { strength: 0.35, radius: 0.3, threshold: 0.6 },
   zoomDuration: 800,
   focusZoom: 3.0,
   /** Zoom level when focused on a subcategory within a constellation */
