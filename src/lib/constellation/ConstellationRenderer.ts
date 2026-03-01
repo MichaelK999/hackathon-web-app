@@ -333,6 +333,10 @@ export class ConstellationRenderer {
 		const phases = new Float32Array(count);
 		const speeds = new Float32Array(count);
 		const sizes = new Float32Array(count);
+		// Per-star color tint: 0 = cool purple, 1 = warm amber
+		const tints = new Float32Array(count);
+		// Flicker type: 0 = gentle twinkle, 1 = occasional sharp flicker
+		const flickerFlags = new Float32Array(count);
 		const spread = 8000;
 
 		for (let i = 0; i < count; i++) {
@@ -340,8 +344,26 @@ export class ConstellationRenderer {
 			positions[i * 3 + 1] = (Math.random() - 0.5) * spread * 2;
 			positions[i * 3 + 2] = -10;
 			phases[i] = Math.random() * Math.PI * 2;
-			speeds[i] = 0.3 + Math.random() * 1.2;
-			sizes[i] = 1.0 + Math.random() * 2.5;
+
+			const r = Math.random();
+			if (r < 0.1) {
+				// 10% — bright flickering stars
+				sizes[i] = 2.5 + Math.random() * 2.0;
+				speeds[i] = 2.0 + Math.random() * 4.0;
+				flickerFlags[i] = 1.0;
+			} else if (r < 0.3) {
+				// 20% — medium stars, gentle pulse
+				sizes[i] = 1.5 + Math.random() * 1.5;
+				speeds[i] = 0.3 + Math.random() * 0.8;
+				flickerFlags[i] = 0.0;
+			} else {
+				// 70% — tiny dim stars, very slow
+				sizes[i] = 0.5 + Math.random() * 1.0;
+				speeds[i] = 0.1 + Math.random() * 0.4;
+				flickerFlags[i] = 0.0;
+			}
+
+			tints[i] = Math.random();
 		}
 
 		const geo = new THREE.BufferGeometry();
@@ -349,34 +371,54 @@ export class ConstellationRenderer {
 		geo.setAttribute("aPhase", new THREE.BufferAttribute(phases, 1));
 		geo.setAttribute("aSpeed", new THREE.BufferAttribute(speeds, 1));
 		geo.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
+		geo.setAttribute("aTint", new THREE.BufferAttribute(tints, 1));
+		geo.setAttribute("aFlicker", new THREE.BufferAttribute(flickerFlags, 1));
 
 		this.bgStarMaterial = new THREE.ShaderMaterial({
 			uniforms: {
 				uTime: { value: 0 },
-				uColor: { value: new THREE.Color(PALETTE.backgroundStar) },
+				uColorCool: { value: new THREE.Color(0x9078cc) },
+				uColorWarm: { value: new THREE.Color(0xccaa88) },
 				uPixelRatio: { value: this.renderer.getPixelRatio() },
 			},
 			vertexShader: `
         attribute float aPhase;
         attribute float aSpeed;
         attribute float size;
+        attribute float aTint;
+        attribute float aFlicker;
         varying float vAlpha;
+        varying float vTint;
         uniform float uTime;
         uniform float uPixelRatio;
         void main() {
-          vAlpha = 0.3 + 0.7 * (0.5 + 0.5 * sin(uTime * aSpeed + aPhase));
+          float wave = 0.5 + 0.5 * sin(uTime * aSpeed + aPhase);
+
+          if (aFlicker > 0.5) {
+            // Sharp flicker: use pow to create brief bright spikes
+            float spike = pow(wave, 8.0);
+            vAlpha = 0.1 + 0.9 * spike;
+          } else {
+            // Gentle twinkle
+            vAlpha = 0.2 + 0.5 * wave;
+          }
+
+          vTint = aTint;
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
           gl_PointSize = size * uPixelRatio;
           gl_Position = projectionMatrix * mv;
         }
       `,
 			fragmentShader: `
-        uniform vec3 uColor;
+        uniform vec3 uColorCool;
+        uniform vec3 uColorWarm;
         varying float vAlpha;
+        varying float vTint;
         void main() {
           float d = length(gl_PointCoord - 0.5) * 2.0;
-          float alpha = smoothstep(1.0, 0.3, d) * vAlpha;
-          gl_FragColor = vec4(uColor, alpha * 0.6);
+          float alpha = smoothstep(1.0, 0.2, d) * vAlpha;
+          vec3 color = mix(uColorCool, uColorWarm, vTint);
+          gl_FragColor = vec4(color, alpha * 0.7);
         }
       `,
 			transparent: true,

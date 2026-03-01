@@ -24,7 +24,7 @@ export interface RendererConfig {
 
 export const DEFAULT_CONFIG: RendererConfig = {
   background: 0x08051a,
-  backgroundStarCount: 1200,
+  backgroundStarCount: 2000,
   bloom: { strength: 0.7, radius: 0.5, threshold: 0.45 },
   zoomDuration: 800,
   focusZoom: 3.0,
