@@ -59,6 +59,7 @@ export interface TopicSegment {
 export interface PipelineStartRequest {
 	session_key: string;
 	last_active_org: string;
+	max_conversations?: number;
 }
 
 /** POST /api/pipeline/start response */

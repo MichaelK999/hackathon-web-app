@@ -7,6 +7,7 @@ interface PipelineControlsProps {
   onStart: (params: {
     session_key: string;
     last_active_org: string;
+    max_conversations?: number;
   }) => void;
   isRunning: boolean;
 }
@@ -14,15 +15,18 @@ interface PipelineControlsProps {
 export function PipelineControls({ onStart, isRunning }: PipelineControlsProps) {
   const [sessionKey, setSessionKey] = useState("");
   const [orgId, setOrgId] = useState("");
+  const [maxConvos, setMaxConvos] = useState("2000");
 
   const canSubmit = sessionKey.trim() && orgId.trim() && !isRunning;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
+    const limit = parseInt(maxConvos, 10);
     onStart({
       session_key: sessionKey.trim(),
       last_active_org: orgId.trim(),
+      max_conversations: Number.isNaN(limit) || limit <= 0 ? 2000 : limit,
     });
   };
 
@@ -57,6 +61,22 @@ export function PipelineControls({ onStart, isRunning }: PipelineControlsProps) 
           value={orgId}
           onChange={(e) => setOrgId(e.target.value)}
           placeholder="org-uuid-here"
+          disabled={isRunning}
+          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="max-convos" className="text-sm text-muted-foreground">
+          Max Conversations
+        </label>
+        <input
+          id="max-convos"
+          type="number"
+          value={maxConvos}
+          onChange={(e) => setMaxConvos(e.target.value)}
+          placeholder="2000"
+          min={1}
           disabled={isRunning}
           className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring"
         />
