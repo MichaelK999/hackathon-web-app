@@ -43,7 +43,7 @@ export function usePipelineSSE() {
       setState({ ...INITIAL_STATE, isRunning: true });
 
       const url = createPipelineSSEUrl(runId);
-      const es = new EventSource(url);
+      const es = new EventSource(url, { withCredentials: true });
       eventSourceRef.current = es;
 
       const handleEvent = (e: MessageEvent) => {

@@ -66,3 +66,22 @@ export interface PipelineStartResponse {
 	run_id: string;
 	status: string;
 }
+
+/** A single skill node in the constellation tree */
+export interface SkillNode {
+	label: string;
+	keywords: string[];
+	segment_count: number;
+	status: "locked" | "unlocked";
+}
+
+/** Skill tree: root → subcategory → topics */
+export interface SkillTree {
+	tree: Record<string, Record<string, SkillNode[]>>;
+}
+
+/** Response from POST /api/skills/{label}/unlock */
+export interface SkillUnlockResponse {
+	label: string;
+	status: "unlocked";
+}

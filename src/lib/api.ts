@@ -2,6 +2,8 @@ import type {
 	GraphData,
 	PipelineStartRequest,
 	PipelineStartResponse,
+	SkillTree,
+	SkillUnlockResponse,
 	TopicDetail,
 } from "./types";
 
@@ -16,10 +18,11 @@ function getApiBase(): string {
 export async function startPipeline(
 	params: PipelineStartRequest,
 ): Promise<PipelineStartResponse> {
-	const res = await fetch(`${getApiBase()}/get-cookies`, {
+	const res = await fetch(`${getApiBase()}/api/pipeline/start`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(params),
+		credentials: "include",
 	});
 	if (!res.ok) {
 		const body = await res.json().catch(() => ({}));
@@ -40,7 +43,7 @@ export async function fetchGraphData(runId?: string): Promise<GraphData> {
 	const url = runId
 		? `${getApiBase()}/api/graph-data?run_id=${runId}`
 		: `${getApiBase()}/api/graph-data`;
-	const res = await fetch(url);
+	const res = await fetch(url, { credentials: "include" });
 	if (!res.ok) throw new Error(`HTTP ${res.status}`);
 	return res.json() as Promise<GraphData>;
 }
@@ -49,7 +52,27 @@ export async function fetchGraphData(runId?: string): Promise<GraphData> {
 export async function fetchTopicDetail(label: string): Promise<TopicDetail> {
 	const res = await fetch(
 		`${getApiBase()}/api/topic/${encodeURIComponent(label)}`,
+		{ credentials: "include" },
 	);
 	if (!res.ok) throw new Error(`HTTP ${res.status}`);
 	return res.json() as Promise<TopicDetail>;
+}
+
+/** Fetch the full skill tree with unlock status. */
+export async function fetchSkillTree(): Promise<SkillTree> {
+	const res = await fetch(`${getApiBase()}/api/skills`, {
+		credentials: "include",
+	});
+	if (!res.ok) throw new Error(`HTTP ${res.status}`);
+	return res.json() as Promise<SkillTree>;
+}
+
+/** Unlock a skill (placeholder — no quiz yet). */
+export async function unlockSkill(label: string): Promise<SkillUnlockResponse> {
+	const res = await fetch(
+		`${getApiBase()}/api/skills/${encodeURIComponent(label)}/unlock`,
+		{ method: "POST", credentials: "include" },
+	);
+	if (!res.ok) throw new Error(`HTTP ${res.status}`);
+	return res.json() as Promise<SkillUnlockResponse>;
 }

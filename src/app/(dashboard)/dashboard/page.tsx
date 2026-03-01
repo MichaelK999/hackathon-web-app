@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useEffect } from "react";
 import { PipelineControls } from "@/components/dashboard/PipelineControls";
 import { PipelineProgress } from "@/components/dashboard/PipelineProgress";
@@ -72,6 +73,16 @@ export default function DashboardPage() {
 						{graph.data.nodes.length} nodes &middot; {graph.data.links.length}{" "}
 						links
 					</div>
+				)}
+
+				{/* Skill Tree link */}
+				{graph.data.nodes.length > 0 && (
+					<Link
+						href="/skill-tree"
+						className="mt-auto rounded-lg border border-[#4a6fa5]/30 bg-[#08051a] px-4 py-2.5 text-center text-sm font-medium text-[#7eb4e2] transition-colors hover:border-[#4a6fa5]/60 hover:text-[#a0c4ff]"
+					>
+						Open Skill Tree
+					</Link>
 				)}
 			</aside>
 
