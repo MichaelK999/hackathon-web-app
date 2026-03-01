@@ -22,6 +22,11 @@ const SUB_RING_BASE = 160;
 const TOPIC_SCATTER_MIN = 70;
 const TOPIC_SCATTER_MAX = 130;
 
+/** Minimum separation between topic centers to prevent overlap/jitter. */
+const MIN_TOPIC_SEPARATION = 25;
+/** Number of repulsion iterations to push overlapping topics apart. */
+const SEPARATION_ITERATIONS = 5;
+
 // ── Helpers ─────────────────────────────────────────────────
 
 /** Deterministic hash of a string → integer. */
@@ -53,6 +58,37 @@ function circleRadiusForCount(
 ): number {
   if (n <= 1) return minRadius;
   return Math.max(minRadius, (n * minSpacing) / (2 * Math.PI));
+}
+
+/** Push apart any topic positions closer than `minDist`. */
+function separateTopics(positions: Vec2[], minDist: number, iterations: number): void {
+  for (let iter = 0; iter < iterations; iter++) {
+    for (let i = 0; i < positions.length; i++) {
+      for (let j = i + 1; j < positions.length; j++) {
+        const dx = positions[j].x - positions[i].x;
+        const dy = positions[j].y - positions[i].y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < minDist) {
+          if (dist < 0.001) {
+            // Nearly identical — push apart using golden angle
+            const angle = i * 2.399;
+            positions[i].x -= Math.cos(angle) * minDist * 0.5;
+            positions[i].y -= Math.sin(angle) * minDist * 0.5;
+            positions[j].x += Math.cos(angle) * minDist * 0.5;
+            positions[j].y += Math.sin(angle) * minDist * 0.5;
+          } else {
+            const overlap = (minDist - dist) * 0.5;
+            const nx = dx / dist;
+            const ny = dy / dist;
+            positions[i].x -= nx * overlap;
+            positions[i].y -= ny * overlap;
+            positions[j].x += nx * overlap;
+            positions[j].y += ny * overlap;
+          }
+        }
+      }
+    }
+  }
 }
 
 // ── Main layout function ────────────────────────────────────
@@ -192,15 +228,24 @@ function layoutConstellation(
       .map((id) => nodeById.get(id))
       .filter((n): n is GraphNode => n != null);
 
-    topicNodes.forEach((topic) => {
+    // First pass: compute initial topic positions
+    const topicLocals: Vec2[] = topicNodes.map((topic) => {
       const tAngle = hashNorm(topic.name, 1) * Math.PI * 2;
       const tDist =
         TOPIC_SCATTER_MIN +
         hashNorm(topic.name, 2) * (TOPIC_SCATTER_MAX - TOPIC_SCATTER_MIN);
-      const tLocal: Vec2 = {
+      return {
         x: local.x + Math.cos(tAngle) * tDist,
         y: local.y + Math.sin(tAngle) * tDist,
       };
+    });
+
+    // Push overlapping topics apart
+    separateTopics(topicLocals, MIN_TOPIC_SEPARATION, SEPARATION_ITERATIONS);
+
+    // Second pass: emit positioned nodes and links
+    topicNodes.forEach((topic, ti) => {
+      const tLocal = topicLocals[ti];
       const tWorld: Vec2 = {
         x: center.x + tLocal.x,
         y: center.y + tLocal.y,

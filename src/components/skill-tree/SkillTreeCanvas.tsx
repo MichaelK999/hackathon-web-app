@@ -455,7 +455,7 @@ export function SkillTreeCanvas({ data, onTopicClick }: SkillTreeCanvasProps) {
 			e.preventDefault();
 			const s = stateRef.current;
 			const factor = e.deltaY > 0 ? 0.92 : 1.08;
-			const newZoom = Math.max(0.15, Math.min(5, s.zoom * factor));
+			const newZoom = Math.max(0.15, Math.min(20, s.zoom * factor));
 
 			// Zoom toward mouse position: keep the world point under the
 			// cursor fixed by adjusting the pan offset.

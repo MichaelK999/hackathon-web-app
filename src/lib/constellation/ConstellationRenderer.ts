@@ -852,7 +852,7 @@ export class ConstellationRenderer {
 			const sensitivity = 0.01;
 			const oldZoom = this.targetZoom;
 			this.targetZoom *= 1 - e.deltaY * sensitivity;
-			this.targetZoom = Math.max(0.3, Math.min(8, this.targetZoom));
+			this.targetZoom = Math.max(0.3, Math.min(20, this.targetZoom));
 
 			// Zoom toward mouse position
 			const world = this.clientToWorld(e.clientX, e.clientY);
@@ -875,15 +875,17 @@ export class ConstellationRenderer {
 
 		if (isTrackpadPan) {
 			// Two-finger scroll → pan
-			const panScale = 1.0 / this.camera.zoom;
-			this.camera.position.x += e.deltaX * panScale;
-			this.camera.position.y -= e.deltaY * panScale;
+			const rect = this.renderer.domElement.getBoundingClientRect();
+			const panScaleX = (this.camera.right - this.camera.left) / (this.camera.zoom * rect.width);
+			const panScaleY = (this.camera.top - this.camera.bottom) / (this.camera.zoom * rect.height);
+			this.camera.position.x += e.deltaX * panScaleX;
+			this.camera.position.y -= e.deltaY * panScaleY;
 		} else {
 			// Mouse wheel or single-axis trackpad scroll → zoom
 			const delta = isDiscreteWheel ? e.deltaY * 16 : e.deltaY;
 			const sensitivity = 0.002;
 			this.targetZoom *= 1 - delta * sensitivity;
-			this.targetZoom = Math.max(0.3, Math.min(8, this.targetZoom));
+			this.targetZoom = Math.max(0.3, Math.min(20, this.targetZoom));
 
 			// Store the world-space point under the cursor so the
 			// animation loop can keep it pinned as zoom interpolates.
@@ -934,9 +936,11 @@ export class ConstellationRenderer {
 
 		// Only start panning once past the drag threshold
 		if (this.dragDistance > 4) {
-			const panScale = 1.0 / this.camera.zoom;
-			this.camera.position.x -= dx * panScale;
-			this.camera.position.y += dy * panScale;
+			const rect = this.renderer.domElement.getBoundingClientRect();
+			const panScaleX = (this.camera.right - this.camera.left) / (this.camera.zoom * rect.width);
+			const panScaleY = (this.camera.top - this.camera.bottom) / (this.camera.zoom * rect.height);
+			this.camera.position.x -= dx * panScaleX;
+			this.camera.position.y += dy * panScaleY;
 		}
 
 		this.panStart = { x: e.clientX, y: e.clientY };
@@ -995,7 +999,7 @@ export class ConstellationRenderer {
 
 			if (this.lastPinchDist > 0) {
 				const scale = dist / this.lastPinchDist;
-				this.targetZoom = Math.max(0.3, Math.min(8, this.targetZoom * scale));
+				this.targetZoom = Math.max(0.3, Math.min(20, this.targetZoom * scale));
 
 				// Set zoom anchor at pinch center
 				const rect = this.renderer.domElement.getBoundingClientRect();
