@@ -28,8 +28,8 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
-        <span className="fixed bottom-1 left-1 z-50 text-[10px] text-white/20 pointer-events-none select-none">
-          v3
+        <span className="fixed bottom-2 left-2 z-50 text-xs text-gray-400 pointer-events-none select-none">
+          v4
         </span>
       </body>
     </html>
