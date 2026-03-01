@@ -11,10 +11,7 @@ import type {
 } from "./types";
 
 function getApiBase(): string {
-	const base = process.env.NEXT_PUBLIC_API_BASE_URL;
-	if (!base)
-		throw new Error("NEXT_PUBLIC_API_BASE_URL environment variable is not set");
-	return base;
+	return process.env.NEXT_PUBLIC_API_BASE_URL || "https://aclo.ai";
 }
 
 /** Fetch the visible conversation count from Claude.ai (matches web UI). */
