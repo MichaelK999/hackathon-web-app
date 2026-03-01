@@ -42,6 +42,16 @@ export function PipelineProgress({
   if (!phase) return null;
 
   const phaseIndex = phase ? PHASE_ORDER.indexOf(phase) : -1;
+  const totalPhases = PHASE_ORDER.length;
+  // Compute overall progress: each phase is an equal slice of the bar
+  const overallProgress =
+    phase === "done"
+      ? 100
+      : phase === "error"
+        ? 0
+        : phaseIndex >= 0
+          ? Math.round(((phaseIndex + progress) / totalPhases) * 100)
+          : 0;
 
   return (
     <div className="space-y-3">
@@ -54,9 +64,7 @@ export function PipelineProgress({
         <div
           className="h-full rounded-full bg-primary-foreground transition-all duration-300"
           style={{
-            width: `${Math.round(
-              phase === "done" ? 100 : progress * 100
-            )}%`,
+            width: `${overallProgress}%`,
           }}
         />
       </div>
