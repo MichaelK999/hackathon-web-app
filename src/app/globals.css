@@ -9,6 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-pixel: var(--font-pixel);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -123,4 +124,70 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Pixel font utility */
+.font-pixel {
+  font-family: var(--font-pixel), monospace;
+}
+
+/* Pixel art rendering */
+.pixel-render {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Pixel button style */
+.pixel-btn {
+  font-family: var(--font-pixel), monospace;
+  border: 3px solid;
+  border-color: #f97316 #c2410c #c2410c #f97316;
+  background: #ea580c;
+  color: #fff;
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: all 0.1s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.pixel-btn:hover {
+  border-color: #fb923c #9a3412 #9a3412 #fb923c;
+  background: #f97316;
+  transform: translateY(-1px);
+}
+.pixel-btn:active {
+  border-color: #c2410c #f97316 #f97316 #c2410c;
+  transform: translateY(1px);
+}
+
+/* Stars animation */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+.star {
+  animation: twinkle var(--duration, 3s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+/* Leaflet overrides for dark theme */
+.leaflet-container {
+  background: #0f0f23 !important;
+}
+.leaflet-control-attribution {
+  background: rgba(15, 15, 35, 0.8) !important;
+  color: #6b7280 !important;
+  font-size: 10px !important;
+}
+.leaflet-control-attribution a {
+  color: #f97316 !important;
+}
+.leaflet-control-zoom a {
+  background: #1a1a2e !important;
+  color: #f97316 !important;
+  border-color: #2a2a4e !important;
+}
+.leaflet-control-zoom a:hover {
+  background: #2a2a4e !important;
 }
