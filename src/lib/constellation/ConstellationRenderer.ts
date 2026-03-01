@@ -132,6 +132,8 @@ export class ConstellationRenderer {
 
 	// Smooth zoom (for touchpad)
 	private targetZoom = 1;
+	// Zoom anchor: world-space point that should stay under the cursor
+	private zoomAnchor: { wx: number; wy: number; sx: number; sy: number } | null = null;
 
 	// Lifecycle
 	private container: HTMLElement;
@@ -370,7 +372,10 @@ export class ConstellationRenderer {
 		const tints = new Float32Array(count);
 		// Flicker type: 0 = gentle twinkle, 1 = occasional sharp flicker
 		const flickerFlags = new Float32Array(count);
-		const spread = 8000;
+		// Spread must cover the viewport even at minimum zoom (0.3) with
+		// a potentially large frustum after fitCamera().  Use a generous
+		// value so stars never run out when zoomed all the way out.
+		const spread = 20000;
 
 		for (let i = 0; i < count; i++) {
 			positions[i * 3] = (Math.random() - 0.5) * spread * 2;
@@ -634,6 +639,7 @@ export class ConstellationRenderer {
 	}
 
 	private startCameraAnimation(target: CameraState): void {
+		this.zoomAnchor = null;
 		this.animating = true;
 		this.animStart = performance.now();
 		this.camFrom = {
@@ -819,14 +825,41 @@ export class ConstellationRenderer {
 	 * almost always produce non-zero deltaX, mouse wheels never do — and
 	 * use WheelEvent.deltaMode (0 = pixel = trackpad, 1 = line = mouse).
 	 */
+	/**
+	 * Convert a client-space mouse coordinate to world-space using the
+	 * orthographic camera's current zoom and position.
+	 */
+	private clientToWorld(clientX: number, clientY: number): { x: number; y: number } {
+		const rect = this.renderer.domElement.getBoundingClientRect();
+		// Normalised device coords (-1..1)
+		const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1;
+		const ndcY = -((clientY - rect.top) / rect.height) * 2 + 1;
+
+		const cam = this.camera;
+		const halfW = (cam.right - cam.left) / (2 * cam.zoom);
+		const halfH = (cam.top - cam.bottom) / (2 * cam.zoom);
+		return {
+			x: cam.position.x + ndcX * halfW,
+			y: cam.position.y + ndcY * halfH,
+		};
+	}
+
 	private onWheel(e: WheelEvent): void {
 		e.preventDefault();
 
 		if (e.ctrlKey) {
 			// Pinch-to-zoom on trackpad (or Ctrl+scroll)
 			const sensitivity = 0.01;
+			const oldZoom = this.targetZoom;
 			this.targetZoom *= 1 - e.deltaY * sensitivity;
 			this.targetZoom = Math.max(0.3, Math.min(8, this.targetZoom));
+
+			// Zoom toward mouse position
+			const world = this.clientToWorld(e.clientX, e.clientY);
+			const factor = 1 - oldZoom / this.targetZoom;
+			this.camera.position.x += (world.x - this.camera.position.x) * factor;
+			this.camera.position.y += (world.y - this.camera.position.y) * factor;
+			this.zoomAnchor = null;
 			return;
 		}
 
@@ -851,6 +884,18 @@ export class ConstellationRenderer {
 			const sensitivity = 0.002;
 			this.targetZoom *= 1 - delta * sensitivity;
 			this.targetZoom = Math.max(0.3, Math.min(8, this.targetZoom));
+
+			// Store the world-space point under the cursor so the
+			// animation loop can keep it pinned as zoom interpolates.
+			const rect = this.renderer.domElement.getBoundingClientRect();
+			const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+			const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+			this.zoomAnchor = {
+				wx: this.camera.position.x + ndcX * (this.camera.right - this.camera.left) / (2 * this.camera.zoom),
+				wy: this.camera.position.y + ndcY * (this.camera.top - this.camera.bottom) / (2 * this.camera.zoom),
+				sx: ndcX,
+				sy: ndcY,
+			};
 		}
 	}
 
@@ -951,6 +996,17 @@ export class ConstellationRenderer {
 			if (this.lastPinchDist > 0) {
 				const scale = dist / this.lastPinchDist;
 				this.targetZoom = Math.max(0.3, Math.min(8, this.targetZoom * scale));
+
+				// Set zoom anchor at pinch center
+				const rect = this.renderer.domElement.getBoundingClientRect();
+				const ndcX = ((center.x - rect.left) / rect.width) * 2 - 1;
+				const ndcY = -((center.y - rect.top) / rect.height) * 2 + 1;
+				this.zoomAnchor = {
+					wx: this.camera.position.x + ndcX * (this.camera.right - this.camera.left) / (2 * this.camera.zoom),
+					wy: this.camera.position.y + ndcY * (this.camera.top - this.camera.bottom) / (2 * this.camera.zoom),
+					sx: ndcX,
+					sy: ndcY,
+				};
 			}
 
 			// Pan with pinch center movement
@@ -1069,6 +1125,16 @@ export class ConstellationRenderer {
 		// Smooth zoom interpolation (for trackpad/pinch)
 		if (Math.abs(this.camera.zoom - this.targetZoom) > 0.001) {
 			this.camera.zoom = lerpTo(this.camera.zoom, this.targetZoom, 0.15);
+
+			// Keep the zoom anchor point pinned under the cursor
+			if (this.zoomAnchor) {
+				const a = this.zoomAnchor;
+				const halfW = (this.camera.right - this.camera.left) / (2 * this.camera.zoom);
+				const halfH = (this.camera.top - this.camera.bottom) / (2 * this.camera.zoom);
+				this.camera.position.x = a.wx - a.sx * halfW;
+				this.camera.position.y = a.wy - a.sy * halfH;
+			}
+
 			this.camera.updateProjectionMatrix();
 
 			// Auto-unfocus when zoomed out
@@ -1078,6 +1144,8 @@ export class ConstellationRenderer {
 			) {
 				this.unfocus();
 			}
+		} else {
+			this.zoomAnchor = null;
 		}
 
 		this.updateConstellationVisuals(time);

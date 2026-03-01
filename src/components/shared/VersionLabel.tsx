@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const FRONTEND_VERSION = 5;
+const FRONTEND_VERSION = 6;
 
 export function VersionLabel() {
 	const [backendVersion, setBackendVersion] = useState<number | null>(null);
