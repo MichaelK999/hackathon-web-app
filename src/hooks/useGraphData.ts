@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { fetchGraphData } from "@/lib/api";
 import type { GraphData, GraphNode, PipelineProgressEvent } from "@/lib/types";
 
 const EMPTY_GRAPH: GraphData = { nodes: [], links: [] };
@@ -8,12 +9,27 @@ const EMPTY_GRAPH: GraphData = { nodes: [], links: [] };
 /**
  * Manages progressive graph state as pipeline events arrive.
  *
+ * - On mount: fetches persisted graph data from the backend
  * - During labeling: each event with a `node` → appends to graph
  * - After hierarchy: event with `graph_snapshot` → replaces entire graph
  */
 export function useGraphData() {
   const [data, setData] = useState<GraphData>(EMPTY_GRAPH);
   const seenNodeIds = useRef(new Set<string>());
+
+  // Load persisted graph data on mount
+  useEffect(() => {
+    fetchGraphData()
+      .then((graphData) => {
+        if (graphData.nodes.length > 0) {
+          seenNodeIds.current = new Set(graphData.nodes.map((n) => n.id));
+          setData(graphData);
+        }
+      })
+      .catch(() => {
+        // No persisted data — user hasn't run the pipeline yet
+      });
+  }, []);
 
   /** Process a single SSE event to update graph state. */
   const processEvent = useCallback((event: PipelineProgressEvent) => {
