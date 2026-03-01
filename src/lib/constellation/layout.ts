@@ -206,7 +206,7 @@ function layoutConstellation(
         y: center.y + tLocal.y,
       };
 
-      topics.push({ node: topic, local: tLocal, world: tWorld });
+      topics.push({ node: topic, local: tLocal, world: tWorld, parentSubId: sub.id });
 
       // Link: subcategory → topic
       allLinks.push({ from: world, to: tWorld, kind: "content" });

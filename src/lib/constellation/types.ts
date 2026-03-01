@@ -18,6 +18,8 @@ export interface RendererConfig {
   zoomDuration: number;
   /** Zoom level when focused on a constellation */
   focusZoom: number;
+  /** Zoom level when focused on a subcategory */
+  subFocusZoom: number;
   /** Zoom threshold below which we auto-unfocus */
   unfocusZoomThreshold: number;
 }
@@ -28,6 +30,8 @@ export const DEFAULT_CONFIG: RendererConfig = {
   bloom: { strength: 0.7, radius: 0.5, threshold: 0.45 },
   zoomDuration: 800,
   focusZoom: 3.0,
+  /** Zoom level when focused on a subcategory within a constellation */
+  subFocusZoom: 6.0,
   unfocusZoomThreshold: 1.2,
 };
 
@@ -60,6 +64,8 @@ export interface PositionedNode {
   local: Vec2;
   /** Absolute world-space position. */
   world: Vec2;
+  /** For topics, the ID of the parent subcategory. */
+  parentSubId?: string;
 }
 
 /** A connection line between two positioned nodes. */
@@ -109,6 +115,8 @@ export interface StarMesh {
   type: "subcategory" | "topic";
   baseScale: number;
   phase: number;
+  /** For topic stars, the ID of the parent subcategory. */
+  parentSubId?: string;
 }
 
 export interface LineMesh {
@@ -121,6 +129,8 @@ export interface LabelSprite {
   sprite: THREE.Sprite;
   /** Whether this label is only visible when zoomed into the constellation. */
   zoomOnly: boolean;
+  /** For subcategory/topic labels, the associated subcategory ID. */
+  subId?: string;
 }
 
 // ── Camera animation state ──────────────────────────────────

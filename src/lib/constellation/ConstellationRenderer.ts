@@ -110,6 +110,7 @@ export class ConstellationRenderer {
 
 	// Camera animation
 	private focusedRootId: string | null = null;
+	private focusedSubId: string | null = null;
 	private animating = false;
 	private animStart = 0;
 	private camFrom: CameraState = { x: 0, y: 0, zoom: 1 };
@@ -277,10 +278,42 @@ export class ConstellationRenderer {
 		});
 	}
 
-	/** Return to overview (all constellations). */
+	/** Focus on a specific subcategory within the currently focused constellation. */
+	focusSubcategory(subId: string): void {
+		const group = this.groups.find((g) => g.rootId === this.focusedRootId);
+		if (!group) return;
+
+		const star = group.stars.find(
+			(s) => s.type === "subcategory" && s.node.id === subId,
+		);
+		if (!star) return;
+
+		this.focusedSubId = subId;
+		this.startCameraAnimation({
+			x: group.center.x + star.sprite.position.x,
+			y: group.center.y + star.sprite.position.y,
+			zoom: this.config.subFocusZoom,
+		});
+	}
+
+	/** Return from sub-focus to constellation focus, or from constellation to overview. */
 	unfocus(): void {
-		this.focusedRootId = null;
-		this.startCameraAnimation({ x: 0, y: 0, zoom: 1 });
+		if (this.focusedSubId) {
+			// Back to constellation level
+			this.focusedSubId = null;
+			const group = this.groups.find((g) => g.rootId === this.focusedRootId);
+			if (group) {
+				this.startCameraAnimation({
+					x: group.center.x,
+					y: group.center.y,
+					zoom: this.config.focusZoom,
+				});
+			}
+		} else {
+			// Back to overview
+			this.focusedRootId = null;
+			this.startCameraAnimation({ x: 0, y: 0, zoom: 1 });
+		}
 	}
 
 	/** Whether we're currently focused on a constellation. */
@@ -471,6 +504,7 @@ export class ConstellationRenderer {
 				type: "subcategory",
 				baseScale,
 				phase: Math.random() * Math.PI * 2,
+				parentSubId: sub.node.id,
 			});
 
 			// Subcategory label (zoom-only)
@@ -482,7 +516,7 @@ export class ConstellationRenderer {
 			);
 			label.position.set(sub.local.x, sub.local.y - 12, 1);
 			group.add(label);
-			sceneGroup.labels.push({ sprite: label, zoomOnly: true });
+			sceneGroup.labels.push({ sprite: label, zoomOnly: true, subId: sub.node.id });
 		}
 
 		// Topic stars
@@ -507,13 +541,14 @@ export class ConstellationRenderer {
 				type: "topic",
 				baseScale,
 				phase: Math.random() * Math.PI * 2,
+				parentSubId: topic.parentSubId,
 			});
 
 			// Topic label (zoom-only)
 			const label = createTextSprite(topic.node.name, 11, PALETTE.topicCSS, 0);
 			label.position.set(topic.local.x, topic.local.y - 8, 1);
 			group.add(label);
-			sceneGroup.labels.push({ sprite: label, zoomOnly: true });
+			sceneGroup.labels.push({ sprite: label, zoomOnly: true, subId: topic.parentSubId });
 		}
 
 		// Connection lines
@@ -579,6 +614,7 @@ export class ConstellationRenderer {
 		}
 		this.groups = [];
 		this.focusedRootId = null;
+		this.focusedSubId = null;
 	}
 
 	// ── Camera ──────────────────────────────────────────────────
@@ -630,19 +666,32 @@ export class ConstellationRenderer {
 
 	private updateConstellationVisuals(time: number): void {
 		for (const cg of this.groups) {
-			const isFocused =
+			const isConstellationFocused =
 				this.focusedRootId === null || this.focusedRootId === cg.rootId;
-			const fadeFactor = isFocused ? 1.0 : 0.08;
+			const constellationFade = isConstellationFocused ? 1.0 : 0.08;
+			const inSubFocus =
+				this.focusedSubId !== null && this.focusedRootId === cg.rootId;
 
 			// Stars: twinkle + fade
 			for (const star of cg.stars) {
-				// Astral Sorcery style flicker: sin(time * speed + phase)
 				const flicker = 1.0 + 0.08 * Math.sin(time * 2.0 + star.phase);
 				const s = star.baseScale * flicker;
 				star.sprite.scale.set(s, s, 1);
 
 				const baseOpacity = star.type === "subcategory" ? 0.9 : 0.8;
-				const target = baseOpacity * fadeFactor;
+				let starFade = constellationFade;
+
+				if (inSubFocus) {
+					// In sub-focus: only show the focused subcategory and its topics
+					const belongsToFocusedSub =
+						(star.type === "subcategory" &&
+							star.node.id === this.focusedSubId) ||
+						(star.type === "topic" &&
+							star.parentSubId === this.focusedSubId);
+					starFade = belongsToFocusedSub ? 1.0 : 0.05;
+				}
+
+				const target = baseOpacity * starFade;
 				star.sprite.material.opacity = lerpTo(
 					star.sprite.material.opacity,
 					target,
@@ -652,16 +701,27 @@ export class ConstellationRenderer {
 
 			// Lines: fade
 			for (const lm of cg.lines) {
-				const target = lm.baseOpacity * fadeFactor;
+				const target = lm.baseOpacity * constellationFade * (inSubFocus ? 0.15 : 1.0);
 				const mat = lm.line.material as THREE.LineBasicMaterial;
 				mat.opacity = lerpTo(mat.opacity, target, 0.08);
 			}
 
-			// Zoom-only labels: show when focused
+			// Zoom-only labels: show when focused, respect sub-focus
 			const showLabels = this.focusedRootId === cg.rootId;
 			for (const label of cg.labels) {
 				if (!label.zoomOnly) continue;
-				const target = showLabels ? 1.0 : 0;
+
+				let target = 0;
+				if (showLabels) {
+					if (inSubFocus) {
+						// Only show labels belonging to focused subcategory
+						target =
+							label.subId === this.focusedSubId ? 1.0 : 0;
+					} else {
+						target = 1.0;
+					}
+				}
+
 				label.sprite.material.opacity = lerpTo(
 					label.sprite.material.opacity,
 					target,
@@ -669,13 +729,15 @@ export class ConstellationRenderer {
 				);
 			}
 
-			// Root label opacity
+			// Root label opacity — hide in sub-focus
 			if (cg.rootLabel) {
 				const target =
 					this.focusedRootId === null
 						? 1.0
 						: this.focusedRootId === cg.rootId
-							? 1.0
+							? inSubFocus
+								? 0
+								: 1.0
 							: 0.1;
 				cg.rootLabel.sprite.material.opacity = lerpTo(
 					cg.rootLabel.sprite.material.opacity,
@@ -729,7 +791,16 @@ export class ConstellationRenderer {
 				const parent = this.groups.find((g) =>
 					g.stars.some((s) => s.node.id === ud.nodeRef!.id),
 				);
-				if (parent && this.focusedRootId !== parent.rootId) {
+				if (!parent) return;
+
+				if (this.focusedRootId === parent.rootId) {
+					// Already focused on this constellation — zoom into subcategory
+					if (this.focusedSubId === ud.nodeRef.id) {
+						this.unfocus(); // toggle back to constellation level
+					} else {
+						this.focusSubcategory(ud.nodeRef.id);
+					}
+				} else {
 					this.focusConstellation(parent.rootId);
 				}
 			}
@@ -904,8 +975,10 @@ export class ConstellationRenderer {
 	// ── Keyboard ─────────────────────────────────────────────────
 
 	private onKeyDown(e: KeyboardEvent): void {
-		if (e.key === "Escape" && this.focusedRootId) {
-			this.unfocus();
+		if (e.key === "Escape") {
+			if (this.focusedSubId || this.focusedRootId) {
+				this.unfocus();
+			}
 		}
 	}
 
