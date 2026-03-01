@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { VersionLabel } from "@/components/shared/VersionLabel";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,9 +29,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
-        <span className="fixed bottom-2 left-2 z-50 text-xs text-gray-400 pointer-events-none select-none">
-          v4
-        </span>
+        <VersionLabel />
       </body>
     </html>
   );
