@@ -44,7 +44,6 @@ export function GraphVisualization({ data }: GraphVisualizationProps) {
 			const detail = await fetchTopicDetail(node.name);
 			setSelectedTopic(detail);
 		} catch {
-			// If fetch fails, show a minimal detail from the node itself
 			setSelectedTopic({
 				label: node.name,
 				keywords: node.keywords ?? [],

@@ -2,10 +2,11 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { PipelineControls } from "@/components/dashboard/PipelineControls";
 import { PipelineProgress } from "@/components/dashboard/PipelineProgress";
 import { useGraphData } from "@/hooks/useGraphData";
+import { useNotes } from "@/hooks/useNotes";
 import { usePipelineSSE } from "@/hooks/usePipelineSSE";
 import { startPipeline } from "@/lib/api";
 
@@ -28,6 +29,8 @@ const GraphVisualization = dynamic(
 export default function DashboardPage() {
 	const pipeline = usePipelineSSE();
 	const graph = useGraphData();
+	const notes = useNotes();
+	const notesStartedRef = useRef(false);
 
 	// Feed SSE events into graph data manager
 	useEffect(() => {
@@ -37,6 +40,15 @@ export default function DashboardPage() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [pipeline.latestEvent]);
 
+	// Start polling notes when pipeline completes
+	useEffect(() => {
+		if (pipeline.phase === "done" && !notesStartedRef.current) {
+			notesStartedRef.current = true;
+			notes.startPolling();
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [pipeline.phase]);
+
 	const handleStart = async (params: {
 		session_key: string;
 		last_active_org: string;
@@ -44,6 +56,8 @@ export default function DashboardPage() {
 		try {
 			graph.reset();
 			pipeline.reset();
+			notes.stopPolling();
+			notesStartedRef.current = false;
 			const { run_id } = await startPipeline(params);
 			pipeline.connect(run_id);
 		} catch (err) {
@@ -87,8 +101,22 @@ export default function DashboardPage() {
 			</aside>
 
 			{/* Main graph area */}
-			<main className="flex-1 bg-[#08051a]">
+			<main className="relative flex-1 bg-[#08051a]">
 				<GraphVisualization data={graph.data} />
+
+				{/* Download notes button (top-right of graph area) */}
+				{graph.data.nodes.length > 0 && pipeline.phase === "done" && (
+					<button
+						type="button"
+						onClick={notes.downloadZip}
+						disabled={notes.generating || notes.count === 0}
+						className="absolute right-3 top-3 z-10 rounded-lg border border-[#4a6fa5]/30 bg-[#0a1024]/85 px-3 py-2 text-sm text-[#7eb4e2] backdrop-blur-sm transition-colors hover:border-[#4a6fa5]/70 hover:text-[#a0c4ff] disabled:pointer-events-none disabled:opacity-50"
+					>
+						{notes.generating
+							? `Generating Notes (${notes.count})...`
+							: "Download Notes (.md)"}
+					</button>
+				)}
 			</main>
 		</div>
 	);

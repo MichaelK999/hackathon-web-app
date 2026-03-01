@@ -86,3 +86,17 @@ export interface SkillUnlockResponse {
 	label: string;
 	status: "unlocked";
 }
+
+/** GET /api/notes — bulk poll */
+export interface NotesResponse {
+	notes: Record<string, string>;
+	count: number;
+	generating: boolean;
+}
+
+/** GET /api/notes/{label} — single note */
+export interface SingleNoteResponse {
+	label: string;
+	markdown: string;
+	cached: boolean;
+}

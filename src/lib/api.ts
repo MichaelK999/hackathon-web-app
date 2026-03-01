@@ -1,7 +1,9 @@
 import type {
 	GraphData,
+	NotesResponse,
 	PipelineStartRequest,
 	PipelineStartResponse,
+	SingleNoteResponse,
 	SkillTree,
 	SkillUnlockResponse,
 	TopicDetail,
@@ -75,4 +77,23 @@ export async function unlockSkill(label: string): Promise<SkillUnlockResponse> {
 	);
 	if (!res.ok) throw new Error(`HTTP ${res.status}`);
 	return res.json() as Promise<SkillUnlockResponse>;
+}
+
+/** Poll all notes generation status. */
+export async function fetchNotes(): Promise<NotesResponse> {
+	const res = await fetch(`${getApiBase()}/api/notes`, {
+		credentials: "include",
+	});
+	if (!res.ok) throw new Error(`HTTP ${res.status}`);
+	return res.json() as Promise<NotesResponse>;
+}
+
+/** Fetch a single note by topic label. */
+export async function fetchNote(label: string): Promise<SingleNoteResponse> {
+	const res = await fetch(
+		`${getApiBase()}/api/notes/${encodeURIComponent(label)}`,
+		{ credentials: "include" },
+	);
+	if (!res.ok) throw new Error(`HTTP ${res.status}`);
+	return res.json() as Promise<SingleNoteResponse>;
 }
