@@ -55,11 +55,10 @@ export interface TopicSegment {
 	messages: { sender: string; text: string }[];
 }
 
-/** POST /api/pipeline/start request body */
+/** POST /get-cookies request body */
 export interface PipelineStartRequest {
 	session_key: string;
 	last_active_org: string;
-	max_conversations: number;
 }
 
 /** POST /api/pipeline/start response */

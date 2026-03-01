@@ -39,7 +39,6 @@ export default function DashboardPage() {
 	const handleStart = async (params: {
 		session_key: string;
 		last_active_org: string;
-		max_conversations: number;
 	}) => {
 		try {
 			graph.reset();

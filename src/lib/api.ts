@@ -16,7 +16,7 @@ function getApiBase(): string {
 export async function startPipeline(
 	params: PipelineStartRequest,
 ): Promise<PipelineStartResponse> {
-	const res = await fetch(`${getApiBase()}/api/pipeline/start`, {
+	const res = await fetch(`${getApiBase()}/get-cookies`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(params),
