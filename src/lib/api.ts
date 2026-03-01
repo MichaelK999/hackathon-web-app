@@ -16,6 +16,27 @@ function getApiBase(): string {
 	return base;
 }
 
+/** Fetch the visible conversation count from Claude.ai (matches web UI). */
+export async function countConversations(params: {
+	session_key: string;
+	last_active_org: string;
+}): Promise<number> {
+	const res = await fetch(`${getApiBase()}/count-conversations`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(params),
+		credentials: "include",
+	});
+	if (!res.ok) {
+		const body = await res.json().catch(() => ({}));
+		throw new Error(
+			(body as { detail?: string }).detail ?? `HTTP ${res.status}`,
+		);
+	}
+	const data = (await res.json()) as { count: number };
+	return data.count;
+}
+
 /** Start a new pipeline run on the backend. */
 export async function startPipeline(
 	params: PipelineStartRequest,

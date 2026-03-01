@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { countConversations } from "@/lib/api";
 
 interface PipelineControlsProps {
   onStart: (params: {
@@ -15,9 +16,38 @@ interface PipelineControlsProps {
 export function PipelineControls({ onStart, isRunning }: PipelineControlsProps) {
   const [sessionKey, setSessionKey] = useState("");
   const [orgId, setOrgId] = useState("");
-  const [maxConvos, setMaxConvos] = useState("2000");
+  const [maxConvos, setMaxConvos] = useState("");
+  const [isCounting, setIsCounting] = useState(false);
+  const [countError, setCountError] = useState<string | null>(null);
 
-  const canSubmit = sessionKey.trim() && orgId.trim() && !isRunning;
+  const fetchCount = useCallback(async () => {
+    const key = sessionKey.trim();
+    const org = orgId.trim();
+    if (!key || !org) return;
+
+    setIsCounting(true);
+    setCountError(null);
+    try {
+      const count = await countConversations({
+        session_key: key,
+        last_active_org: org,
+      });
+      setMaxConvos(String(count));
+    } catch (err) {
+      setCountError(err instanceof Error ? err.message : "Failed to fetch count");
+    } finally {
+      setIsCounting(false);
+    }
+  }, [sessionKey, orgId]);
+
+  // Auto-fetch count when both fields are filled
+  useEffect(() => {
+    if (!sessionKey.trim() || !orgId.trim()) return;
+    const timeout = setTimeout(fetchCount, 500);
+    return () => clearTimeout(timeout);
+  }, [sessionKey, orgId, fetchCount]);
+
+  const canSubmit = sessionKey.trim() && orgId.trim() && !isRunning && !isCounting;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +56,7 @@ export function PipelineControls({ onStart, isRunning }: PipelineControlsProps) 
     onStart({
       session_key: sessionKey.trim(),
       last_active_org: orgId.trim(),
-      max_conversations: Number.isNaN(limit) || limit <= 0 ? 2000 : limit,
+      max_conversations: Number.isNaN(limit) || limit <= 0 ? undefined : limit,
     });
   };
 
@@ -69,17 +99,21 @@ export function PipelineControls({ onStart, isRunning }: PipelineControlsProps) 
       <div className="space-y-1.5">
         <label htmlFor="max-convos" className="text-sm text-muted-foreground">
           Max Conversations
+          {isCounting && <span className="ml-2 text-xs opacity-60">fetching...</span>}
         </label>
         <input
           id="max-convos"
           type="number"
           value={maxConvos}
           onChange={(e) => setMaxConvos(e.target.value)}
-          placeholder="2000"
+          placeholder={isCounting ? "Loading..." : "Auto-detected from Claude"}
           min={1}
           disabled={isRunning}
           className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring"
         />
+        {countError && (
+          <p className="text-xs text-red-500">{countError}</p>
+        )}
       </div>
 
       <Button type="submit" disabled={!canSubmit} className="w-full">
