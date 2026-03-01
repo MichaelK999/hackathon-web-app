@@ -2,13 +2,14 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { CategorySelector } from "@/components/dashboard/CategorySelector";
 import { PipelineControls } from "@/components/dashboard/PipelineControls";
 import { PipelineProgress } from "@/components/dashboard/PipelineProgress";
 import { useGraphData } from "@/hooks/useGraphData";
 import { useNotes } from "@/hooks/useNotes";
 import { usePipelineSSE } from "@/hooks/usePipelineSSE";
-import { startPipeline } from "@/lib/api";
+import { continuePipeline, startPipeline } from "@/lib/api";
 
 // Dynamic import: 3d-force-graph uses window/WebGL, can't render on server
 const GraphVisualization = dynamic(
@@ -31,6 +32,7 @@ export default function DashboardPage() {
 	const graph = useGraphData();
 	const notes = useNotes();
 	const notesStartedRef = useRef(false);
+	const [currentRunId, setCurrentRunId] = useState<string | null>(null);
 
 	// Feed SSE events into graph data manager
 	useEffect(() => {
@@ -58,10 +60,24 @@ export default function DashboardPage() {
 			pipeline.reset();
 			notes.stopPolling();
 			notesStartedRef.current = false;
+			setCurrentRunId(null);
 			const { run_id } = await startPipeline(params);
+			setCurrentRunId(run_id);
 			pipeline.connect(run_id);
 		} catch (err) {
 			console.error("Failed to start pipeline:", err);
+		}
+	};
+
+	const handleContinue = async (excludedCategories: string[]) => {
+		if (!currentRunId) return;
+		try {
+			await continuePipeline({
+				run_id: currentRunId,
+				excluded_categories: excludedCategories,
+			});
+		} catch (err) {
+			console.error("Failed to continue pipeline:", err);
 		}
 	};
 
@@ -80,6 +96,13 @@ export default function DashboardPage() {
 					progress={pipeline.progress}
 					error={pipeline.error}
 				/>
+
+				{pipeline.isAwaitingReview && pipeline.scanResult && (
+					<CategorySelector
+						scanResult={pipeline.scanResult}
+						onContinue={handleContinue}
+					/>
+				)}
 
 				{/* Node count */}
 				{graph.data.nodes.length > 0 && (

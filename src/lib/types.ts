@@ -1,6 +1,8 @@
 /** Pipeline phase names — mirrors backend PipelinePhase enum */
 export type PipelinePhase =
 	| "fetching"
+	| "scanning"
+	| "awaiting_review"
 	| "embedding"
 	| "segmenting"
 	| "clustering"
@@ -31,6 +33,23 @@ export interface GraphData {
 	links: GraphLink[];
 }
 
+/** A detected privacy/safety category from the pre-scan */
+export interface PrivacyCategory {
+	id: string;
+	name: string;
+	source: "gliner" | "nemoguard";
+	conversation_count: number;
+	conversation_uuids: string[];
+}
+
+/** Result of the privacy pre-scan stage */
+export interface ScanResult {
+	total_conversations: number;
+	flagged_conversations: number;
+	categories: PrivacyCategory[];
+	conversation_flags: Record<string, string[]>;
+}
+
 /** SSE progress event from the pipeline */
 export interface PipelineProgressEvent {
 	phase: PipelinePhase;
@@ -38,6 +57,13 @@ export interface PipelineProgressEvent {
 	progress: number; // 0.0 – 1.0
 	node?: GraphNode;
 	graph_snapshot?: GraphData;
+	scan_result?: ScanResult;
+}
+
+/** POST /api/pipeline/continue request body */
+export interface PipelineContinueRequest {
+	run_id: string;
+	excluded_categories: string[];
 }
 
 /** Topic detail from GET /api/topic/{label} */

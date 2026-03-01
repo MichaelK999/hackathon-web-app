@@ -1,6 +1,7 @@
 import type {
 	GraphData,
 	NotesResponse,
+	PipelineContinueRequest,
 	PipelineStartRequest,
 	PipelineStartResponse,
 	SingleNoteResponse,
@@ -54,6 +55,25 @@ export async function startPipeline(
 		);
 	}
 	return res.json() as Promise<PipelineStartResponse>;
+}
+
+/** Continue a pipeline run after reviewing privacy scan results. */
+export async function continuePipeline(
+	params: PipelineContinueRequest,
+): Promise<{ status: string }> {
+	const res = await fetch(`${getApiBase()}/api/pipeline/continue`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(params),
+		credentials: "include",
+	});
+	if (!res.ok) {
+		const body = await res.json().catch(() => ({}));
+		throw new Error(
+			(body as { detail?: string }).detail ?? `HTTP ${res.status}`,
+		);
+	}
+	return res.json() as Promise<{ status: string }>;
 }
 
 /** Construct SSE URL for streaming pipeline progress. */

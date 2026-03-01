@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPipelineSSEUrl } from "@/lib/api";
-import type { PipelinePhase, PipelineProgressEvent } from "@/lib/types";
+import type { PipelinePhase, PipelineProgressEvent, ScanResult } from "@/lib/types";
 
 export interface PipelineSSEState {
   phase: PipelinePhase | null;
@@ -11,6 +11,8 @@ export interface PipelineSSEState {
   isRunning: boolean;
   error: string | null;
   latestEvent: PipelineProgressEvent | null;
+  scanResult: ScanResult | null;
+  isAwaitingReview: boolean;
 }
 
 const INITIAL_STATE: PipelineSSEState = {
@@ -20,6 +22,8 @@ const INITIAL_STATE: PipelineSSEState = {
   isRunning: false,
   error: null,
   latestEvent: null,
+  scanResult: null,
+  isAwaitingReview: false,
 };
 
 /**
@@ -57,6 +61,8 @@ export function usePipelineSSE() {
             latestEvent: event,
             isRunning: event.phase !== "done" && event.phase !== "error",
             error: event.phase === "error" ? event.message : null,
+            scanResult: event.scan_result ?? prev.scanResult,
+            isAwaitingReview: event.phase === "awaiting_review",
           }));
 
           if (event.phase === "done" || event.phase === "error") {
@@ -71,6 +77,8 @@ export function usePipelineSSE() {
       // Listen to all phase event types
       const phases: PipelinePhase[] = [
         "fetching",
+        "scanning",
+        "awaiting_review",
         "embedding",
         "segmenting",
         "clustering",

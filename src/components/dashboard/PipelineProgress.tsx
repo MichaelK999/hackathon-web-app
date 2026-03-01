@@ -4,6 +4,8 @@ import type { PipelinePhase } from "@/lib/types";
 
 const PHASE_LABELS: Record<PipelinePhase, string> = {
   fetching: "Fetching Conversations",
+  scanning: "Scanning for Privacy",
+  awaiting_review: "Review & Approve",
   embedding: "Embedding Messages",
   segmenting: "Segmenting Conversations",
   clustering: "Clustering Segments",
@@ -15,6 +17,8 @@ const PHASE_LABELS: Record<PipelinePhase, string> = {
 
 const PHASE_ORDER: PipelinePhase[] = [
   "fetching",
+  "scanning",
+  "awaiting_review",
   "embedding",
   "segmenting",
   "clustering",
