@@ -77,7 +77,7 @@ export default function DashboardPage() {
 			</aside>
 
 			{/* Main graph area */}
-			<main className="flex-1 bg-[#0b1120]">
+			<main className="flex-1 bg-[#08051a]">
 				<GraphVisualization data={graph.data} />
 			</main>
 		</div>

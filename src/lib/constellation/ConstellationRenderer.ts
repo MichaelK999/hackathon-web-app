@@ -333,7 +333,7 @@ export class ConstellationRenderer {
 		const phases = new Float32Array(count);
 		const speeds = new Float32Array(count);
 		const sizes = new Float32Array(count);
-		const spread = 1800;
+		const spread = 8000;
 
 		for (let i = 0; i < count; i++) {
 			positions[i * 3] = (Math.random() - 0.5) * spread * 2;

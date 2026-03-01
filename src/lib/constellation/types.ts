@@ -23,9 +23,9 @@ export interface RendererConfig {
 }
 
 export const DEFAULT_CONFIG: RendererConfig = {
-  background: 0x050a18,
-  backgroundStarCount: 400,
-  bloom: { strength: 0.5, radius: 0.4, threshold: 0.6 },
+  background: 0x08051a,
+  backgroundStarCount: 1200,
+  bloom: { strength: 0.7, radius: 0.5, threshold: 0.45 },
   zoomDuration: 800,
   focusZoom: 3.0,
   unfocusZoomThreshold: 1.2,
@@ -34,15 +34,16 @@ export const DEFAULT_CONFIG: RendererConfig = {
 // ── Color palette ───────────────────────────────────────────
 
 export const PALETTE = {
-  rootLabel: 0xe8f0fe,
-  subcategory: 0xa0c4ff,
-  topic: 0xffd699,
-  connection: 0x4a6fa5,
-  backgroundStar: 0x8899bb,
+  // Thaumcraft violet + Astral gold
+  rootLabel: 0xe0d4ff,
+  subcategory: 0xb08aff,
+  topic: 0xffcc66,
+  connection: 0x7a5cbf,
+  backgroundStar: 0x8878aa,
 
-  rootLabelCSS: "#e8f0fe",
-  subcategoryCSS: "#a0c4ff",
-  topicCSS: "#ffd699",
+  rootLabelCSS: "#e0d4ff",
+  subcategoryCSS: "#b08aff",
+  topicCSS: "#ffcc66",
 } as const;
 
 // ── Layout types ────────────────────────────────────────────
